@@ -1,12 +1,4 @@
-(function (root, factory) {
-	if ( typeof define === 'function' && define.amd ) {
-		define('smoothScroll', factory(root));
-	} else if ( typeof exports === 'object' ) {
-		module.exports = factory(root);
-	} else {
-		root.smoothScroll = factory(root);
-	}
-})(window || this, function (root) {
+module.exports = (function () {
 
 	'use strict';
 
@@ -15,14 +7,14 @@
 	//
 
 	var smoothScroll = {}; // Object for public APIs
-	var supports = !!document.querySelector && !!root.addEventListener; // Feature test
-	var settings, eventTimeout, fixedHeader;
+	var supports = typeof document !== 'undefined' && !!document.querySelector && typeof window !== 'undefined' && !!window.addEventListener; // Feature test
+	var eventTimeout, fixedHeader;
 
 	// Default settings
-	var defaults = {
+	var settings = {
 		speed: 500,
 		easing: 'easeInOutCubic',
-		offset: 0,
+		offset: 50,
 		updateURL: false,
 		callbackBefore: function () {},
 		callbackAfter: function () {}
@@ -32,45 +24,6 @@
 	//
 	// Methods
 	//
-
-	/**
-	 * A simple forEach() implementation for Arrays, Objects and NodeLists
-	 * @private
-	 * @param {Array|Object|NodeList} collection Collection of items to iterate
-	 * @param {Function} callback Callback function for each iteration
-	 * @param {Array|Object|NodeList} scope Object/NodeList/Array that forEach is iterating over (aka `this`)
-	 */
-	var forEach = function (collection, callback, scope) {
-		if (Object.prototype.toString.call(collection) === '[object Object]') {
-			for (var prop in collection) {
-				if (Object.prototype.hasOwnProperty.call(collection, prop)) {
-					callback.call(scope, collection[prop], prop, collection);
-				}
-			}
-		} else {
-			for (var i = 0, len = collection.length; i < len; i++) {
-				callback.call(scope, collection[i], i, collection);
-			}
-		}
-	};
-
-	/**
-	 * Merge defaults with user options
-	 * @private
-	 * @param {Object} defaults Default settings
-	 * @param {Object} options User options
-	 * @returns {Object} Merged values of defaults and options
-	 */
-	var extend = function ( defaults, options ) {
-		var extended = {};
-		forEach(defaults, function (value, prop) {
-			extended[prop] = defaults[prop];
-		});
-		forEach(options, function (value, prop) {
-			extended[prop] = options[prop];
-		});
-		return extended;
-	};
 
 	/**
 	 * Get the closest matching element up the DOM tree
@@ -174,7 +127,7 @@
 	 */
 	var updateUrl = function ( anchor, url ) {
 		if ( history.pushState && (url || url === 'true') ) {
-			history.pushState( null, null, [root.location.protocol, '//', root.location.host, root.location.pathname, root.location.search, anchor].join('') );
+			history.pushState( null, null, [window.location.protocol, '//', window.location.host, window.location.pathname, window.location.search, anchor].join('') );
 		}
 	};
 
@@ -184,17 +137,13 @@
 	 * @param {Element} anchor The element to scroll to
 	 * @param {Object} options
 	 */
-	smoothScroll.animateScroll = function ( anchor, options ) {
-
-		// Options and overrides
-		var lSettings = extend( settings || defaults, options || {} );  // Merge user options with defaults
+	smoothScroll.animateScroll = function ( anchor ) {
 
 		// Selectors and variables
-		var anchorElem = document.getElementById(anchor);
-		var startLocation = root.pageYOffset; // Current location on the page
+		var startLocation = window.pageYOffset; // Current location on the page
 		if ( !fixedHeader ) { fixedHeader = document.querySelector('[data-scroll-header]'); }  // Get the fixed header if not already set
 		var headerHeight = fixedHeader === null ? 0 : ( getHeight( fixedHeader ) + fixedHeader.offsetTop ); // Get the height of a fixed header if one exists
-		var endLocation = getEndLocation( anchorElem, headerHeight, parseInt(lSettings.offset, 10) ); // Scroll to location
+		var endLocation = getEndLocation( anchor, headerHeight, parseInt(settings.offset, 10) ); // Scroll to location
 		var animationInterval; // interval timer
 		var distance = endLocation - startLocation; // distance to travel
 		var documentHeight = getDocumentHeight();
@@ -202,7 +151,7 @@
 		var percentage, position;
 
 		// Update URL
-		updateUrl('#' + anchor, lSettings.updateURL);
+		updateUrl('#' + anchor.id, settings.updateURL);
 
 		/**
 		 * Stop the scroll animation when it reaches its target (or the bottom/top of page)
@@ -212,10 +161,10 @@
 		 * @param {Number} animationInterval How much to scroll on this loop
 		 */
 		var stopAnimateScroll = function (position, endLocation, animationInterval) {
-			var currentLocation = root.pageYOffset;
-			if ( position == endLocation || currentLocation == endLocation || ( (root.innerHeight + currentLocation) >= documentHeight ) ) {
+			var currentLocation = window.pageYOffset;
+			if ( position == endLocation || currentLocation == endLocation || ( (window.innerHeight + currentLocation) >= documentHeight ) ) {
 				clearInterval(animationInterval);
-				anchorElem.focus();
+				anchor.focus();
 			}
 		};
 
@@ -225,10 +174,10 @@
 		 */
 		var loopAnimateScroll = function () {
 			timeLapsed += 16;
-			percentage = ( timeLapsed / parseInt(lSettings.speed, 10) );
+			percentage = ( timeLapsed / parseInt(settings.speed, 10) );
 			percentage = ( percentage > 1 ) ? 1 : percentage;
-			position = startLocation + ( distance * easingPattern(lSettings.easing, percentage) );
-			root.scrollTo( 0, Math.floor(position) );
+			position = startLocation + ( distance * easingPattern(settings.easing, percentage) );
+			window.scrollTo( 0, Math.floor(position) );
 			stopAnimateScroll(position, endLocation, animationInterval);
 		};
 
@@ -244,8 +193,8 @@
 		 * Reset position to fix weird iOS bug
 		 * @link https://github.com/cferdinandi/smooth-scroll/issues/45
 		 */
-		if ( root.pageYOffset === 0 ) {
-			root.scrollTo( 0, 0 );
+		if ( window.pageYOffset === 0 ) {
+			window.scrollTo( 0, 0 );
 		}
 
 		// Start scrolling animation
@@ -253,44 +202,6 @@
 
 	};
 
-	/**
-	 * Destroy the current initialization.
-	 * @public
-	 */
-	smoothScroll.destroy = function () {
-
-		// If plugin isn't already initialized, stop
-		if ( !settings ) return;
-
-		// Reset varaibles
-		settings = null;
-		eventTimeout = null;
-		fixedHeader = null;
-	};
-
-	/**
-	 * Initialize Smooth Scroll
-	 * @public
-	 * @param {Object} options User settings
-	 */
-	smoothScroll.init = function ( options ) {
-
-		// feature test
-		if ( !supports ) return;
-
-		// Destroy any existing initializations
-		smoothScroll.destroy();
-
-		// Selectors and variables
-		settings = extend( defaults, options || {} ); // Merge user options with defaults
-
-	};
-
-
-	//
-	// Public APIs
-	//
-
 	return smoothScroll;
 
-});
+})();
