@@ -151,7 +151,9 @@ module.exports = (function () {
 		var percentage, position;
 
 		// Update URL
-		updateUrl('#' + anchor.id, settings.updateURL);
+		if (anchor.id) {
+			updateUrl('#' + anchor.id, settings.updateURL);
+		}
 
 		/**
 		 * Stop the scroll animation when it reaches its target (or the bottom/top of page)

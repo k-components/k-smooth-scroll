@@ -17,7 +17,7 @@ function SmoothScroll() {
 SmoothScroll.prototype.name = 'k-smooth-scroll';
 
 SmoothScroll.prototype.create = function(model) {
-	this.smooth = require("./lib/smooth-scroll.js");
+	this.smooth = require("./lib/smooth-scroll.min.js");
 	this.selector = this.model.get('selector');
 
 	if (this.selector) {
